@@ -4,10 +4,7 @@ import sys
 import math
 import random
 import time
-import threading
 
-import time
-import thread
 from collections import deque
 from pyglet import image
 from pyglet.gl import *
@@ -38,30 +35,6 @@ PLAYER_HEIGHT = 2
 
 FEATURES = dict()
 
-
-# multi-threading for timer of power_time
-class RepeatEvery(threading.Thread):
-    def __init__(self, object , window_object):
-
-        threading.Thread.__init__(self)     
-        self.object =object  # seconds between calls
-        self.runable = True
-
-    def run(self):
-        #global score # make score global for this thread context
-        self.object.power_time= 5
-        while self.object.power_time > 0 and self.runable:
-            time.sleep(1)
-                 
-            self.object.power_time = self.object.power_time - 1
-        window_object.flying=False
-
-    def stop(self):
-        self.runable = False
-
-###################################################
-
-
 if sys.version_info[0] >= 3:
     xrange = range
 
@@ -78,6 +51,9 @@ def cube_vertices(x, y, z, n):
         x+n,y-n,z-n, x-n,y-n,z-n, x-n,y+n,z-n, x+n,y+n,z-n,  # back
     ]
 
+def square_vertices(x,y,z,n):
+
+    return [x,y,z, x+n,y,z, x,y+n,z, x+n,y+n,z]
 
 def tex_coord(x, y, n=4):
     """ Return the bounding vertices of the texture square.
@@ -109,8 +85,6 @@ GRASS = tex_coords((1, 0), (0, 1), (0, 0))
 SAND = tex_coords((1, 1), (1, 1), (1, 1))
 BRICK = tex_coords((2, 0), (2, 0), (2, 0))
 STONE = tex_coords((2, 1), (2, 1), (2, 1))
-COIN = tex_coords((3,0),(3,0),(3,0))
-
 
 FACES = [
     ( 0, 1, 0),
@@ -166,7 +140,7 @@ class Model(object):
 
         # A TextureGroup manages an OpenGL texture.
         self.group = TextureGroup(image.load(TEXTURE_PATH).get_texture())
-
+        self.group1 = TextureGroup(image.load("images.jpg").get_texture())
         # A mapping from position to the texture of the block at that position.
         # This defines all the blocks that are currently in the world.
         self.world = {}
@@ -184,13 +158,16 @@ class Model(object):
         # _show_block() and _hide_block() calls
         self.queue = deque()
 
-
-
         self._initialize()
 
     def features(self):
-        self.add_block((2, -1, 2), COIN, immediate=False)
+        self.add_block((2, -1, 2), GRASS, immediate=False)
         FEATURES[(2, -1, 2)] = "fly"
+        self.add_block((2, 20, 2), GRASS, immediate=False)
+        self._shown[(4,4,-2,1)] = self.batch.add(4, GL_QUADS, self.group1,
+            ('v3f/static', square_vertices(4,4,-2,1)),
+            ('t2f/static', [0,0,1,0,1,1,0,1]))
+
 
     def _initialize(self):
         """ Initialize the world by placing all the blocks.
@@ -208,7 +185,7 @@ class Model(object):
                 self.add_block((x, y - 3, z), STONE, immediate=False)
                 if x in (-n, n) or z in (-n, n):
                     # create outer walls.
-                    for dy in   xrange(-2, 30):
+                    for dy in   xrange(-2, 3):
                         self.add_block((x, y + dy, z), GRASS, immediate=False)
 
         # generate the hills randomly
@@ -368,6 +345,7 @@ class Model(object):
         self._shown[position] = self.batch.add(24, GL_QUADS, self.group,
             ('v3f/static', vertex_data),
             ('t2f/static', texture_data))
+      #  print(self._shown[position])
 
     def hide_block(self, position, immediate=True):
         """ Hide the block at the given `position`. Hiding does not remove the
@@ -469,7 +447,6 @@ class Model(object):
         while self.queue:
             self._dequeue()
 
-   
 
 
 
@@ -526,7 +503,7 @@ class Window(pyglet.window.Window):
 
         # Instance of the model that handles the world.
         self.model = Model()
-        self.power_time=0
+
         # The label that is displayed in the top left of the canvas.
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
@@ -535,15 +512,6 @@ class Window(pyglet.window.Window):
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
         pyglet.clock.schedule_interval(self.update, 1.0 / TICKS_PER_SEC)
-
-    def func1(self):
-        self.power_time= 20
-        while self.power_time > 0 :
-            print(self.flying)
-            time.sleep(1)
-            self.power_time =- 1
-        self.flying=False
-        print(self.flying)
 
     def set_exclusive_mouse(self, exclusive):
         """ If `exclusive` is True, the game will capture the mouse, if False
@@ -761,16 +729,11 @@ class Window(pyglet.window.Window):
 
     def checker(self, position):
        # print(position)
-        #print(self.flying)
+        print(self.flying)
         for  k, v in FEATURES.iteritems():
-         
-         #   print(k," ",v)
+            print(k," ",v)
             if k[0] -2 <position[0]< k[0] + 4 and k[1] -2 <position[1]< k[1] + 4 and k[2] -2 <position[2]< k[2] + 4 and v== "fly":
                 self.flying = True
-                thread.start_new_thread(self.func1, ())
-               # Thread(target=self.func1).start()
-                
-
                 del FEATURES[k]
                 self.model.remove_block(k)
                 break
@@ -908,9 +871,9 @@ class Window(pyglet.window.Window):
         """
         x, y, z = self.position
         
-        self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d   Power : %d sec  %d' % (
+        self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d' % (
             pyglet.clock.get_fps(), x, y, z,
-            len(self.model._shown), len(self.model.world),self.power_time,self.block[2])                         
+            len(self.model._shown), len(self.model.world))
         self.label.draw()
 
     def draw_reticle(self):
