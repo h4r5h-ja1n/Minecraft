@@ -82,7 +82,7 @@ GRASS = tex_coords((1, 0), (0, 1), (0, 0))
 SAND = tex_coords((1, 1), (1, 1), (1, 1))
 BRICK = tex_coords((2, 0), (2, 0), (2, 0))
 STONE = tex_coords((2, 1), (2, 1), (2, 1))
-
+COIN = tex_coords((3,0),(3,0),(3,0))
 FACES = [
     ( 0, 1, 0),
     ( 0,-1, 0),
@@ -158,7 +158,7 @@ class Model(object):
         self._initialize()
 
     def features(self):
-        self.add_block((2, -1, 2), GRASS, immediate=False)
+        self.add_block((2, -1, 2), COIN, immediate=False)
         FEATURES[(2, -1, 2)] = "fly"
 
     def _initialize(self):
