@@ -4,6 +4,8 @@ import sys
 import math
 import random
 import time
+import threading
+
 
 from collections import deque
 from pyglet import image
@@ -34,6 +36,30 @@ TERMINAL_VELOCITY = 50
 PLAYER_HEIGHT = 2
 
 FEATURES = dict()
+
+
+# multi-threading for timer of power_time
+class RepeatEvery(threading.Thread):
+    def __init__(self, object , window_object):
+
+        threading.Thread.__init__(self)     
+        self.object =object  # seconds between calls
+        self.runable = True
+
+    def run(self):
+        #global score # make score global for this thread context
+        self.object.power_time= 5
+        while self.object.power_time > 0 and self.runable:
+            time.sleep(1)
+                 
+            self.object.power_time = self.object.power_time - 1
+        window_object.flying=False
+
+    def stop(self):
+        self.runable = False
+
+###################################################
+
 
 if sys.version_info[0] >= 3:
     xrange = range
@@ -83,6 +109,8 @@ SAND = tex_coords((1, 1), (1, 1), (1, 1))
 BRICK = tex_coords((2, 0), (2, 0), (2, 0))
 STONE = tex_coords((2, 1), (2, 1), (2, 1))
 COIN = tex_coords((3,0),(3,0),(3,0))
+
+
 FACES = [
     ( 0, 1, 0),
     ( 0,-1, 0),
@@ -154,6 +182,8 @@ class Model(object):
         # Simple function queue implementation. The queue is populated with
         # _show_block() and _hide_block() calls
         self.queue = deque()
+
+        self.power_time=0
 
         self._initialize()
 
@@ -438,6 +468,7 @@ class Model(object):
         while self.queue:
             self._dequeue()
 
+   
 
 
 
@@ -725,6 +756,10 @@ class Window(pyglet.window.Window):
             print(k," ",v)
             if k[0] -2 <position[0]< k[0] + 4 and k[1] -2 <position[1]< k[1] + 4 and k[2] -2 <position[2]< k[2] + 4 and v== "fly":
                 self.flying = True
+
+                thread=RepeatEvery(self.model,self)
+                thread.start()
+
                 del FEATURES[k]
                 self.model.remove_block(k)
                 break
@@ -862,9 +897,9 @@ class Window(pyglet.window.Window):
         """
         x, y, z = self.position
         
-        self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d' % (
+        self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d   Power : %d sec  %d' % (
             pyglet.clock.get_fps(), x, y, z,
-            len(self.model._shown), len(self.model.world))
+            len(self.model._shown), len(self.model.world),self.model.power_time,self.block[2])                         
         self.label.draw()
 
     def draw_reticle(self):
