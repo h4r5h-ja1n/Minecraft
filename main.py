@@ -6,7 +6,8 @@ import random
 import time
 import threading
 
-
+import time
+import thread
 from collections import deque
 from pyglet import image
 from pyglet.gl import *
@@ -183,7 +184,7 @@ class Model(object):
         # _show_block() and _hide_block() calls
         self.queue = deque()
 
-        self.power_time=0
+
 
         self._initialize()
 
@@ -525,7 +526,7 @@ class Window(pyglet.window.Window):
 
         # Instance of the model that handles the world.
         self.model = Model()
-
+        self.power_time=0
         # The label that is displayed in the top left of the canvas.
         self.label = pyglet.text.Label('', font_name='Arial', font_size=18,
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
@@ -534,6 +535,15 @@ class Window(pyglet.window.Window):
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
         pyglet.clock.schedule_interval(self.update, 1.0 / TICKS_PER_SEC)
+
+    def func1(self):
+        self.power_time= 20
+        while self.power_time > 0 :
+            print(self.flying)
+            time.sleep(1)
+            self.power_time =- 1
+        self.flying=False
+        print(self.flying)
 
     def set_exclusive_mouse(self, exclusive):
         """ If `exclusive` is True, the game will capture the mouse, if False
@@ -751,14 +761,15 @@ class Window(pyglet.window.Window):
 
     def checker(self, position):
        # print(position)
-        print(self.flying)
+        #print(self.flying)
         for  k, v in FEATURES.iteritems():
-            print(k," ",v)
+         
+         #   print(k," ",v)
             if k[0] -2 <position[0]< k[0] + 4 and k[1] -2 <position[1]< k[1] + 4 and k[2] -2 <position[2]< k[2] + 4 and v== "fly":
                 self.flying = True
-
-                thread=RepeatEvery(self.model,self)
-                thread.start()
+                thread.start_new_thread(self.func1, ())
+               # Thread(target=self.func1).start()
+                
 
                 del FEATURES[k]
                 self.model.remove_block(k)
@@ -899,7 +910,7 @@ class Window(pyglet.window.Window):
         
         self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d   Power : %d sec  %d' % (
             pyglet.clock.get_fps(), x, y, z,
-            len(self.model._shown), len(self.model.world),self.model.power_time,self.block[2])                         
+            len(self.model._shown), len(self.model.world),self.power_time,self.block[2])                         
         self.label.draw()
 
     def draw_reticle(self):
