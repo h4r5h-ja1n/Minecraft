@@ -33,6 +33,8 @@ TERMINAL_VELOCITY = 50
 
 PLAYER_HEIGHT = 2
 
+FEATURES = dict()
+
 if sys.version_info[0] >= 3:
     xrange = range
 
@@ -155,11 +157,17 @@ class Model(object):
 
         self._initialize()
 
+    def features(self):
+        self.add_block((2, -1, 2), GRASS, immediate=False)
+        FEATURES[(2, -1, 2)] = "fly"
+
     def _initialize(self):
         """ Initialize the world by placing all the blocks.
 
         """
-        n = 80  # 1/2 width and height of world
+  #      self.add_block((0, 20 - 2, 0), GRASS, immediate=False)
+        self.features()
+        n = 160  # 1/2 width and height of world
         s = 1  # step size
         y = 0  # initial y height
         for x in xrange(-n, n + 1, s):
@@ -169,12 +177,12 @@ class Model(object):
                 self.add_block((x, y - 3, z), STONE, immediate=False)
                 if x in (-n, n) or z in (-n, n):
                     # create outer walls.
-                    for dy in xrange(-2, 3):
-                        self.add_block((x, y + dy, z), STONE, immediate=False)
+                    for dy in   xrange(-2, 30):
+                        self.add_block((x, y + dy, z), GRASS, immediate=False)
 
         # generate the hills randomly
         o = n - 10
-        for _ in xrange(120):
+        for _ in xrange(240):
             a = random.randint(-o, o)  # x position of the hill
             b = random.randint(-o, o)  # z position of the hill
             c = -1  # base of the hill
@@ -431,6 +439,8 @@ class Model(object):
             self._dequeue()
 
 
+
+
 class Window(pyglet.window.Window):
 
     def __init__(self, *args, **kwargs):
@@ -501,6 +511,7 @@ class Window(pyglet.window.Window):
         """
         super(Window, self).set_exclusive_mouse(exclusive)
         self.exclusive = exclusive
+
 
     def get_sight_vector(self):
         """ Returns the current line of sight vector indicating the direction
@@ -607,6 +618,7 @@ class Window(pyglet.window.Window):
         # collisions
         x, y, z = self.position
         x, y, z = self.collide((x + dx, y + dy, z + dz), PLAYER_HEIGHT)
+        self.checker(self.position)
         self.position = (x, y, z)
 
     def collide(self, position, height):
@@ -706,6 +718,17 @@ class Window(pyglet.window.Window):
             y = max(-90, min(90, y))
             self.rotation = (x, y)
 
+    def checker(self, position):
+       # print(position)
+        print(self.flying)
+        for  k, v in FEATURES.iteritems():
+            print(k," ",v)
+            if k[0] -2 <position[0]< k[0] + 4 and k[1] -2 <position[1]< k[1] + 4 and k[2] -2 <position[2]< k[2] + 4 and v== "fly":
+                self.flying = True
+                del FEATURES[k]
+                self.model.remove_block(k)
+                break
+
     def on_key_press(self, symbol, modifiers):
         """ Called when the player presses a key. See pyglet docs for key
         mappings.
@@ -730,12 +753,13 @@ class Window(pyglet.window.Window):
             if self.dy == 0:
                 self.dy = JUMP_SPEED
         elif symbol == key.ESCAPE:
-            self.set_exclusive_mouse(False)
+            self.set_exclusive_mouse(not self.exclusive)
         elif symbol == key.TAB:
             self.flying = not self.flying
         elif symbol in self.num_keys:
             index = (symbol - self.num_keys[0]) % len(self.inventory)
             self.block = self.inventory[index]
+        #self.checker()
 
     def on_key_release(self, symbol, modifiers):
         """ Called when the player releases a key. See pyglet docs for key
@@ -837,6 +861,7 @@ class Window(pyglet.window.Window):
 
         """
         x, y, z = self.position
+        
         self.label.text = '%02d (%.2f, %.2f, %.2f) %d / %d' % (
             pyglet.clock.get_fps(), x, y, z,
             len(self.model._shown), len(self.model.world))
